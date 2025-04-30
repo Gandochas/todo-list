@@ -6,10 +6,7 @@ import 'package:my_todo_app/task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 typedef TaskUpdater =
-    Future<void> Function({
-      required Task newTask,
-      required Task oldTask,
-    });
+    void Function({required Task newTask, required Task oldTask});
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -19,21 +16,21 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<Task> _tasks = [];
+  late List<Task> _tasks;
 
   @override
   void initState() {
     super.initState();
+    _tasks = [];
     unawaited(
-      _loadTaskList().then(
-        (value) => setState(() {
-          _tasks = value;
-        }),
-      ),
+      _loadTasksFromMemory().then((tasks) {
+        _tasks = tasks;
+        setState(() {});
+      }),
     );
   }
 
-  Future<List<Task>> _loadTaskList() async {
+  Future<List<Task>> _loadTasksFromMemory() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStringList = prefs.getStringList('task_list');
 
@@ -48,41 +45,29 @@ class _MyHomePageState extends State<MyHomePage> {
         .toList();
   }
 
-  Future<void> _updateTaskList(List<Task> tasks) async {
+  Future<void> _updateTasksInMemory(List<Task> tasks) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonTaskList =
         tasks.map((task) => jsonEncode(task.toJson())).toList();
     await prefs.setStringList('task_list', jsonTaskList);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  void _addTask() {
+    _tasks.add(
+      Task(name: 'Task ${_tasks.length + 1}', isCompleted: false),
+    );
+    unawaited(_updateTasksInMemory(_tasks));
   }
 
-  Future<void> _addField() async {
-    setState(() {
-      _tasks.add(
-        Task(name: 'Task ${_tasks.length + 1}', isCompleted: false),
-      );
-      _updateTaskList(_tasks);
-    });
+  void _removeTask(Task task) {
+    _tasks.remove(task);
+    unawaited(_updateTasksInMemory(_tasks));
   }
 
-  Future<void> _removeField(Task task) async {
-    setState(() {
-      _tasks.remove(task);
-      _updateTaskList(_tasks);
-    });
-  }
-
-  Future<void> _changeTask({
-    required Task oldTask,
-    required Task newTask,
-  }) async {
+  void _updateTask({required Task oldTask, required Task newTask}) {
     final index = _tasks.indexOf(oldTask);
     _tasks[index] = newTask;
-    await _updateTaskList(_tasks);
+    unawaited(_updateTasksInMemory(_tasks));
   }
 
   @override
@@ -94,7 +79,10 @@ class _MyHomePageState extends State<MyHomePage> {
         centerTitle: true,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addField,
+        onPressed: () {
+          _addTask();
+          setState(() {});
+        },
         child: const Icon(Icons.add),
       ),
       body: Container(
@@ -115,12 +103,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         Checkbox(
                           value: _tasks[index].isCompleted,
                           onChanged: (value) {
-                            unawaited(
-                              _changeTask(
-                                oldTask: _tasks[index],
-                                newTask: _tasks[index].copyWith(
-                                  isCompleted: value,
-                                ),
+                            _updateTask(
+                              oldTask: _tasks[index],
+                              newTask: _tasks[index].copyWith(
+                                isCompleted: value,
                               ),
                             );
                             setState(() {});
@@ -128,14 +114,15 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         Expanded(
                           child: TaskTitle(
-                            task: _tasks[index],
+                            initialTask: _tasks[index],
                             key: ObjectKey(_tasks[index]),
-                            update: _changeTask,
+                            updateTask: _updateTask,
                           ),
                         ),
                         IconButton(
-                          onPressed: () async {
-                            await _removeField(_tasks[index]);
+                          onPressed: () {
+                            _removeTask(_tasks[index]);
+                            setState(() {});
                           },
                           icon: const Icon(
                             Icons.delete_forever,
@@ -159,13 +146,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class TaskTitle extends StatefulWidget {
   const TaskTitle({
-    required this.task,
-    required this.update,
+    required this.initialTask,
+    required this.updateTask,
     super.key,
   });
 
-  final Task task;
-  final TaskUpdater update;
+  final Task initialTask;
+  final TaskUpdater updateTask;
 
   @override
   State<TaskTitle> createState() => _TaskTitleState();
@@ -173,13 +160,13 @@ class TaskTitle extends StatefulWidget {
 
 class _TaskTitleState extends State<TaskTitle> {
   late final TextEditingController _nameController;
-  late Task task;
+  late Task _task;
 
   @override
   void initState() {
     super.initState();
-    task = widget.task;
-    _nameController = TextEditingController();
+    _task = widget.initialTask;
+    _nameController = TextEditingController(text: _task.name);
   }
 
   @override
@@ -193,19 +180,15 @@ class _TaskTitleState extends State<TaskTitle> {
     return TextField(
       controller: _nameController,
       onChanged: (value) {
-        unawaited(
-          widget.update(
-            oldTask: task,
-            newTask: task.copyWith(name: value),
-          ),
+        final newTask = _task.copyWith(name: value);
+        widget.updateTask(
+          oldTask: _task,
+          newTask: _task.copyWith(name: value),
         );
-        task = task.copyWith(name: value);
+        _task = newTask;
       },
-      decoration: InputDecoration(
-        border: const UnderlineInputBorder(
-          borderSide: BorderSide.none,
-        ),
-        hintText: widget.task.name,
+      decoration: const InputDecoration(
+        border: UnderlineInputBorder(borderSide: BorderSide.none),
       ),
     );
   }
