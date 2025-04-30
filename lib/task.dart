@@ -1,4 +1,4 @@
-import 'package:meta/meta.dart';
+import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 @immutable
