@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:my_todo_app/task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+typedef TaskUpdater =
+    Future<void> Function({
+      required Task newTask,
+      required Task oldTask,
+    });
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
@@ -18,35 +24,35 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    unawaited(_showTasks());
+    unawaited(
+      _loadTaskList().then(
+        (value) => setState(() {
+          _tasks = value;
+        }),
+      ),
+    );
   }
 
-  Future<List<Task>> _getTaskList() async {
+  Future<List<Task>> _loadTaskList() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStringList = prefs.getStringList('task_list');
 
-    if (jsonStringList != null) {
-      return jsonStringList
-          .map(
-            (jsonString) => Task.fromJson(
-              jsonDecode(jsonString) as Map<String, Object?>,
-            ),
-          )
-          .toList();
-    }
-    return [];
+    if (jsonStringList == null) return [];
+
+    return jsonStringList
+        .map(
+          (jsonString) => Task.fromJson(
+            jsonDecode(jsonString) as Map<String, Object?>,
+          ),
+        )
+        .toList();
   }
 
-  Future<void> _updateTaskList() async {
+  Future<void> _updateTaskList(List<Task> tasks) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonTaskList =
-        _tasks.map((task) => jsonEncode(task.toJson())).toList();
+        tasks.map((task) => jsonEncode(task.toJson())).toList();
     await prefs.setStringList('task_list', jsonTaskList);
-  }
-
-  Future<void> _showTasks() async {
-    _tasks = await _getTaskList();
-    setState(() {});
   }
 
   @override
@@ -56,16 +62,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _addField() async {
     setState(() {
-      _tasks.add(Task(name: 'Task ${_tasks.length + 1}'));
-      _updateTaskList();
+      _tasks.add(
+        Task(name: 'Task ${_tasks.length + 1}', isCompleted: false),
+      );
+      _updateTaskList(_tasks);
     });
   }
 
   Future<void> _removeField(Task task) async {
     setState(() {
       _tasks.remove(task);
-      _updateTaskList();
+      _updateTaskList(_tasks);
     });
+  }
+
+  Future<void> _changeTask({
+    required Task oldTask,
+    required Task newTask,
+  }) async {
+    final index = _tasks.indexOf(oldTask);
+    _tasks[index] = newTask;
+    await _updateTaskList(_tasks);
   }
 
   @override
@@ -98,18 +115,22 @@ class _MyHomePageState extends State<MyHomePage> {
                         Checkbox(
                           value: _tasks[index].isCompleted,
                           onChanged: (value) {
-                            setState(() {
-                              _tasks[index].isCompleted =
-                                  value ?? false;
-                              unawaited(_updateTaskList());
-                            });
+                            unawaited(
+                              _changeTask(
+                                oldTask: _tasks[index],
+                                newTask: _tasks[index].copyWith(
+                                  isCompleted: value,
+                                ),
+                              ),
+                            );
+                            setState(() {});
                           },
                         ),
                         Expanded(
                           child: TaskTitle(
                             task: _tasks[index],
                             key: ObjectKey(_tasks[index]),
-                            update: _updateTaskList,
+                            update: _changeTask,
                           ),
                         ),
                         IconButton(
@@ -144,7 +165,7 @@ class TaskTitle extends StatefulWidget {
   });
 
   final Task task;
-  final Future<void> Function() update;
+  final TaskUpdater update;
 
   @override
   State<TaskTitle> createState() => _TaskTitleState();
@@ -152,10 +173,12 @@ class TaskTitle extends StatefulWidget {
 
 class _TaskTitleState extends State<TaskTitle> {
   late final TextEditingController _nameController;
+  late Task task;
 
   @override
   void initState() {
     super.initState();
+    task = widget.task;
     _nameController = TextEditingController();
   }
 
@@ -170,10 +193,13 @@ class _TaskTitleState extends State<TaskTitle> {
     return TextField(
       controller: _nameController,
       onChanged: (value) {
-        setState(() {
-          widget.task.name = value;
-          unawaited(widget.update());
-        });
+        unawaited(
+          widget.update(
+            oldTask: task,
+            newTask: task.copyWith(name: value),
+          ),
+        );
+        task = task.copyWith(name: value);
       },
       decoration: InputDecoration(
         border: const UnderlineInputBorder(
