@@ -52,10 +52,8 @@ class _MyHomePageState extends State<MyHomePage> {
     await prefs.setStringList('task_list', jsonTaskList);
   }
 
-  void _addTask() {
-    _tasks.add(
-      Task(name: 'Task ${_tasks.length + 1}', isCompleted: false),
-    );
+  void _addTask(String taskName) {
+    _tasks.add(Task(name: taskName, isCompleted: false));
     unawaited(_updateTasksInMemory(_tasks));
   }
 
@@ -70,6 +68,36 @@ class _MyHomePageState extends State<MyHomePage> {
     unawaited(_updateTasksInMemory(_tasks));
   }
 
+  Future<void> _openCreateMenu(BuildContext context) {
+    final nameController = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Create a new task'),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Enter task name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _addTask(nameController.text);
+                _loadTasksFromMemory();
+                Navigator.of(context).pop();
+                setState(() {});
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _addTask();
+          unawaited(_openCreateMenu(context));
           setState(() {});
         },
         child: const Icon(Icons.add),
