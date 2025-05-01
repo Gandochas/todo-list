@@ -9,7 +9,14 @@ typedef TaskUpdater =
     void Function({required Task newTask, required Task oldTask});
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+  const MyHomePage({
+    required this.isDarkTheme,
+    required this.switchTheme,
+    super.key,
+  });
+
+  final VoidCallback switchTheme;
+  final bool isDarkTheme;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -22,6 +29,11 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     _tasks = [];
+    unawaited(
+      _loadThemeFromMemory().then((isDark) {
+        setState(() {});
+      }),
+    );
     unawaited(
       _loadTasksFromMemory().then((tasks) {
         _tasks = tasks;
@@ -50,6 +62,18 @@ class _MyHomePageState extends State<MyHomePage> {
     final jsonTaskList =
         tasks.map((task) => jsonEncode(task.toJson())).toList();
     await prefs.setStringList('task_list', jsonTaskList);
+  }
+
+  Future<bool> _loadThemeFromMemory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isDark = prefs.getBool('is_dark');
+
+    return isDark ?? false;
+  }
+
+  Future<void> _updateThemeInMemory(bool isDark) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_dark', isDark);
   }
 
   void _addTask(String taskName) {
@@ -102,11 +126,35 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).primaryColor,
         title: const Text('My TODO App'),
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: IconButton(
+              onPressed: () {
+                widget.switchTheme();
+                unawaited(_updateThemeInMemory(widget.isDarkTheme));
+              },
+              icon:
+                  widget.isDarkTheme
+                      ? const Icon(
+                        key: ValueKey('dark_icon'),
+                        Icons.dark_mode,
+                        color: Colors.black,
+                      )
+                      : const Icon(
+                        key: ValueKey('light_icon'),
+                        Icons.light_mode,
+                        color: Colors.yellow,
+                      ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).primaryColor,
         onPressed: () {
           unawaited(_openCreateMenu(context));
           setState(() {});
@@ -124,12 +172,16 @@ class _MyHomePageState extends State<MyHomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 itemCount: _tasks.length,
                 itemBuilder: (context, index) {
-                  return Container(
-                    color: Colors.grey[400],
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: Theme.of(context).primaryColor,
+                    ),
                     child: Row(
                       children: [
                         Checkbox(
                           value: _tasks[index].isCompleted,
+                          checkColor: Colors.black,
                           onChanged: (value) {
                             _updateTask(
                               oldTask: _tasks[index],
@@ -152,9 +204,9 @@ class _MyHomePageState extends State<MyHomePage> {
                             _removeTask(_tasks[index]);
                             setState(() {});
                           },
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.delete_forever,
-                            color: Colors.red,
+                            color: Colors.red[700],
                           ),
                         ),
                       ],
