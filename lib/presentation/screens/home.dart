@@ -15,10 +15,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Future<void> _openCreateMenu() {
-    return showDialog<void>(
-      context: context,
-      builder: (context) => const CreateTaskDialog(),
-    );
+    return showDialog<void>(context: context, builder: (context) => const CreateTaskDialog());
   }
 
   @override
@@ -31,10 +28,7 @@ class _MyHomePageState extends State<MyHomePage> {
         centerTitle: true,
         actions: const [ThemeSwitchButton()],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCreateMenu,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: FloatingActionButton(onPressed: _openCreateMenu, child: const Icon(Icons.add)),
       body: const Padding(
         padding: EdgeInsets.all(30),
         child: Column(
@@ -83,11 +77,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
       actions: [
         TextButton(
           onPressed: () {
-            unawaited(
-              _taskController.add(
-                task: Task(name: _nameController.text, isCompleted: false),
-              ),
-            );
+            unawaited(_taskController.add(task: Task(name: _nameController.text, isCompleted: false)));
             Navigator.of(context).pop();
           },
           child: const Text('Create'),
@@ -163,20 +153,10 @@ class _TaskListEntryState extends State<TaskListEntry> {
           value: widget.task.isCompleted,
           checkColor: Colors.black,
           onChanged: (value) {
-            unawaited(
-              _taskController.update(
-                oldTask: widget.task,
-                newTask: widget.task.copyWith(isCompleted: value),
-              ),
-            );
+            unawaited(_taskController.update(oldTask: widget.task, newTask: widget.task.copyWith(isCompleted: value)));
           },
         ),
-        Expanded(
-          child: TaskTitle(
-            initialTask: widget.task,
-            key: ObjectKey(widget.task),
-          ),
-        ),
+        Expanded(child: TaskTitle(initialTask: widget.task, key: ObjectKey(widget.task))),
         IconButton(
           onPressed: () {
             unawaited(_taskController.remove(task: widget.task));
@@ -261,9 +241,7 @@ class _TaskTitleState extends State<TaskTitle> {
         unawaited(_taskController.update(oldTask: _task, newTask: newTask));
         _task = newTask;
       },
-      decoration: const InputDecoration(
-        border: UnderlineInputBorder(borderSide: BorderSide.none),
-      ),
+      decoration: const InputDecoration(border: UnderlineInputBorder(borderSide: BorderSide.none)),
     );
   }
 }

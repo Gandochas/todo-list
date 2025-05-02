@@ -11,10 +11,7 @@ Future<void> main() async {
   final taskController = TaskController(preferences: preferences);
   final themeController = ThemeController(preferences: preferences);
 
-  final dependencies = Dependencies(
-    taskController: taskController,
-    themeController: themeController,
-  );
+  final dependencies = Dependencies(taskController: taskController, themeController: themeController);
 
   await taskController.load();
   await themeController.load();
@@ -23,7 +20,7 @@ Future<void> main() async {
 }
 
 final class Dependencies {
-  Dependencies({required this.taskController, required this.themeController});
+  const Dependencies({required this.taskController, required this.themeController});
 
   final TaskController taskController;
   final ThemeController themeController;

@@ -2,13 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final class ThemeController with ChangeNotifier {
-  ThemeController({required SharedPreferences preferences})
-    : _preferences = preferences,
-      _isDark = false;
+  ThemeController({required SharedPreferences preferences}) : _preferences = preferences, _isDark = false;
 
   final SharedPreferences _preferences;
-
   bool _isDark;
+
   bool get isDark => _isDark;
 
   Future<bool> _fetch() async {
