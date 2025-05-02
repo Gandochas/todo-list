@@ -24,12 +24,11 @@ final class Task {
     'id': id,
   };
 
-  Task copyWith({String? name, bool? isCompleted, String? id}) =>
-      Task(
-        name: name ?? this.name,
-        isCompleted: isCompleted ?? this.isCompleted,
-        id: id ?? this.id,
-      );
+  Task copyWith({String? name, bool? isCompleted, String? id}) => Task(
+    name: name ?? this.name,
+    isCompleted: isCompleted ?? this.isCompleted,
+    id: id ?? this.id,
+  );
 
   @override
   int get hashCode => Object.hashAll([name, isCompleted, id]);
