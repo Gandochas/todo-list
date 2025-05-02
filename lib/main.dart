@@ -1,38 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:my_todo_app/pages/home.dart';
-import 'package:my_todo_app/themes/mytheme.dart';
+import 'package:my_todo_app/data/controller/task_controller.dart';
+import 'package:my_todo_app/data/controller/theme_controller.dart';
+import 'package:my_todo_app/presentation/screens/app.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyTODOApp());
+
+  final preferences = await SharedPreferences.getInstance();
+  final taskController = TaskController(preferences: preferences);
+  final themeController = ThemeController(preferences: preferences);
+
+  final dependencies = Dependencies(
+    taskController: taskController,
+    themeController: themeController,
+  );
+
+  await taskController.load();
+  await themeController.load();
+
+  runApp(App(dependencies: dependencies));
 }
 
-class MyTODOApp extends StatefulWidget {
-  const MyTODOApp({super.key});
+final class Dependencies {
+  Dependencies({required this.taskController, required this.themeController});
 
-  @override
-  State<MyTODOApp> createState() => _MyTODOAppState();
-}
-
-class _MyTODOAppState extends State<MyTODOApp> {
-  bool _isDarkTheme = false;
-
-  void _switchTheme() {
-    setState(() {
-      _isDarkTheme = !_isDarkTheme;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'ToDO List App',
-      theme: _isDarkTheme ? darkMode : lightMode,
-      home: MyHomePage(
-        isDarkTheme: _isDarkTheme,
-        switchTheme: _switchTheme,
-      ),
-    );
-  }
+  final TaskController taskController;
+  final ThemeController themeController;
 }
