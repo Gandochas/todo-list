@@ -1,5 +1,1 @@
 include: package:coca_lints/analysis_options.yaml
-# linter:
-#   rules:
-# formatter:
-#   page_width: 70

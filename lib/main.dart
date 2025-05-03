@@ -1,27 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:my_todo_app/data/controller/task_controller.dart';
-import 'package:my_todo_app/data/controller/theme_controller.dart';
-import 'package:my_todo_app/presentation/screens/app.dart';
+import 'package:my_todo_app/core/di/service_locator.dart';
+import 'package:my_todo_app/core/themes/theme.dart';
+import 'package:my_todo_app/data/tasks_datasource.dart';
+import 'package:my_todo_app/data/theme_datasource.dart';
+import 'package:my_todo_app/domain/controller/task_controller.dart';
+import 'package:my_todo_app/domain/controller/theme_controller.dart';
+import 'package:my_todo_app/presentation/pages/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final preferences = await SharedPreferences.getInstance();
-  final taskController = TaskController(preferences: preferences);
-  final themeController = ThemeController(preferences: preferences);
+  final taskDatasource = TaskDatasourceImpl(preferences: preferences);
+  final themeDatasource = ThemeDatasourceImpl(preferences: preferences);
 
-  final dependencies = Dependencies(taskController: taskController, themeController: themeController);
+  final taskController = TaskController(datasource: taskDatasource);
+  final themeController = ThemeController(themeDatasource: themeDatasource);
 
   await taskController.load();
   await themeController.load();
 
-  runApp(App(dependencies: dependencies));
+  kServiceLocator[TaskController] = taskController;
+  kServiceLocator[ThemeController] = themeController;
+
+  runApp(const MyTODOApp());
 }
 
-final class Dependencies {
-  const Dependencies({required this.taskController, required this.themeController});
+class MyTODOApp extends StatelessWidget {
+  const MyTODOApp({super.key});
 
-  final TaskController taskController;
-  final ThemeController themeController;
+  @override
+  Widget build(BuildContext context) {
+    final themeController = kServiceLocator[ThemeController]! as ThemeController;
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'ToDO List App',
+          theme: themeController.isDark ? darkMode : lightMode,
+          home: const MyHomePage(),
+        );
+      },
+    );
+  }
 }
