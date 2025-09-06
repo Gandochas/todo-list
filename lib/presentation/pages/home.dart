@@ -92,7 +92,7 @@ class TaskListEntry extends StatelessWidget {
                 unawaited(
                   taskController.updateTask(
                     oldTask: task,
-                    newTask: task.copyWith(isCompleted: value),
+                    newTask: task.copyWith(isCompleted: value ?? false),
                   ),
                 );
               },
