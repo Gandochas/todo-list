@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_todo_app/core/themes/theme.dart';
 import 'package:my_todo_app/data/tasks_datasource.dart';
 import 'package:my_todo_app/data/theme_datasource.dart';
-import 'package:my_todo_app/domain/controller/task_controller.dart';
-import 'package:my_todo_app/domain/controller/theme_controller.dart';
+import 'package:my_todo_app/domain/bloc/task/task_bloc.dart';
+import 'package:my_todo_app/domain/bloc/theme/theme_bloc.dart';
 import 'package:my_todo_app/presentation/pages/home.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -15,17 +15,18 @@ Future<void> main() async {
   final taskDatasource = TaskDatasourceImpl(preferences: preferences);
   final themeDatasource = ThemeDatasourceImpl(preferences: preferences);
 
-  final taskController = TaskController(datasource: taskDatasource);
-  final themeController = ThemeController(themeDatasource: themeDatasource);
+  final taskBloc = TaskBloc(datasource: taskDatasource);
+  final themeBloc = ThemeBloc(themeDatasource: themeDatasource);
 
-  await taskController.load();
-  await themeController.load();
+  // Initialize blocs
+  taskBloc.add(const TaskEvent.loadTasks());
+  themeBloc.add(const ThemeEvent.loadTheme());
 
   runApp(
-    MultiProvider(
+    MultiBlocProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => taskController),
-        ChangeNotifierProvider(create: (_) => themeController),
+        BlocProvider(create: (_) => taskBloc),
+        BlocProvider(create: (_) => themeBloc),
       ],
       child: const MyTODOApp(),
     ),
@@ -37,12 +38,12 @@ class MyTODOApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeController>(
-      builder: (context, themeController, child) {
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      builder: (context, state) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'ToDO List App',
-          theme: themeController.isDark ? darkMode : lightMode,
+          theme: state.isDark ? darkMode : lightMode,
           home: const MyHomePage(),
         );
       },

@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:my_todo_app/domain/controller/task_controller.dart';
-import 'package:my_todo_app/domain/controller/theme_controller.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:my_todo_app/domain/bloc/task/task_bloc.dart';
+import 'package:my_todo_app/domain/bloc/theme/theme_bloc.dart';
 import 'package:my_todo_app/domain/models/task.dart';
-import 'package:provider/provider.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -53,18 +53,18 @@ class TaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TaskController>(
-      builder: (context, taskController, child) {
+    return BlocBuilder<TaskBloc, TaskState>(
+      builder: (context, state) {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          itemCount: taskController.tasks.length,
+          itemCount: state.tasks.length,
           itemBuilder: (_, index) {
             return DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 color: Theme.of(context).colorScheme.primary,
               ),
-              child: TaskListEntry(task: taskController.tasks[index]),
+              child: TaskListEntry(task: state.tasks[index]),
             );
           },
           separatorBuilder: (context, index) => const SizedBox(height: 20),
@@ -81,32 +81,29 @@ class TaskListEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TaskController>(
-      builder: (context, taskController, child) {
-        return Row(
-          children: [
-            Checkbox(
-              value: task.isCompleted,
-              checkColor: Colors.black,
-              onChanged: (value) {
-                unawaited(
-                  taskController.updateTask(
-                    oldTask: task,
-                    newTask: task.copyWith(isCompleted: value ?? false),
-                  ),
-                );
-              },
-            ),
-            Expanded(
-              child: TaskTitle(initialTask: task, key: ObjectKey(task)),
-            ),
-            IconButton(
-              onPressed: () => unawaited(taskController.removeTask(task: task)),
-              icon: Icon(Icons.delete_forever, color: Colors.red[700]),
-            ),
-          ],
-        );
-      },
+    final taskBloc = context.read<TaskBloc>();
+    return Row(
+      children: [
+        Checkbox(
+          value: task.isCompleted,
+          checkColor: Colors.black,
+          onChanged: (value) {
+            taskBloc.add(
+              TaskEvent.updateTask(
+                task,
+                task.copyWith(isCompleted: value ?? false),
+              ),
+            );
+          },
+        ),
+        Expanded(
+          child: TaskTitle(initialTask: task, key: ObjectKey(task)),
+        ),
+        IconButton(
+          onPressed: () => taskBloc.add(TaskEvent.removeTask(task)),
+          icon: Icon(Icons.delete_forever, color: Colors.red[700]),
+        ),
+      ],
     );
   }
 }
@@ -116,15 +113,15 @@ class ThemeSwitchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeController>(
-      builder: (context, themeController, child) {
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      builder: (context, state) {
         return Padding(
           padding: const EdgeInsets.all(10),
           child: IconButton(
-            onPressed: () => unawaited(themeController.switchTheme()),
+            onPressed: () => context.read<ThemeBloc>().add(const ThemeEvent.toggleTheme()),
             icon: Icon(
-              themeController.isDark ? Icons.dark_mode : Icons.light_mode,
-              color: themeController.isDark ? Colors.black : Colors.yellow,
+              state.isDark ? Icons.dark_mode : Icons.light_mode,
+              color: state.isDark ? Colors.black : Colors.yellow,
             ),
           ),
         );
@@ -145,26 +142,22 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TaskController>(
-      builder: (context, taskController, child) {
-        return AlertDialog(
-          title: const Text('Create a new task'),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Enter task name'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                unawaited(taskController.addTask(taskName: nameController.text));
-                Navigator.of(context).pop();
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
+    return AlertDialog(
+      title: const Text('Create a new task'),
+      content: TextField(
+        controller: nameController,
+        autofocus: true,
+        decoration: const InputDecoration(hintText: 'Enter task name'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            context.read<TaskBloc>().add(TaskEvent.addTask(nameController.text));
+            Navigator.of(context).pop();
+          },
+          child: const Text('Create'),
+        ),
+      ],
     );
   }
 }
@@ -197,18 +190,14 @@ class _TaskTitleState extends State<TaskTitle> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<TaskController>(
-      builder: (context, taskController, child) {
-        return TextField(
-          controller: _nameController,
-          onEditingComplete: () {
-            final newTask = _task.copyWith(name: _nameController.text);
-            unawaited(taskController.updateTask(oldTask: _task, newTask: newTask));
-            _task = newTask;
-          },
-          decoration: const InputDecoration(border: UnderlineInputBorder(borderSide: BorderSide.none)),
-        );
+    return TextField(
+      controller: _nameController,
+      onEditingComplete: () {
+        final newTask = _task.copyWith(name: _nameController.text);
+        context.read<TaskBloc>().add(TaskEvent.updateTask(_task, newTask));
+        _task = newTask;
       },
+      decoration: const InputDecoration(border: UnderlineInputBorder(borderSide: BorderSide.none)),
     );
   }
 }
