@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:my_todo_app/core/di/service_locator.dart';
 import 'package:my_todo_app/domain/controller/task_controller.dart';
 import 'package:my_todo_app/domain/controller/theme_controller.dart';
 import 'package:my_todo_app/domain/models/task.dart';
+import 'package:provider/provider.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -53,10 +53,8 @@ class TaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final taskController = kServiceLocator[TaskController]! as TaskController;
-    return ListenableBuilder(
-      listenable: taskController,
-      builder: (context, _) {
+    return Consumer<TaskController>(
+      builder: (context, taskController, child) {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 16),
           itemCount: taskController.tasks.length,
@@ -83,28 +81,32 @@ class TaskListEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final taskController = kServiceLocator[TaskController]! as TaskController;
-
-    return Row(
-      children: [
-        ListenableBuilder(
-          listenable: taskController,
-          builder: (context, _) {
-            return Checkbox(
+    return Consumer<TaskController>(
+      builder: (context, taskController, child) {
+        return Row(
+          children: [
+            Checkbox(
               value: task.isCompleted,
               checkColor: Colors.black,
               onChanged: (value) {
-                unawaited(taskController.updateTask(oldTask: task, newTask: task.copyWith(isCompleted: value)));
+                unawaited(
+                  taskController.updateTask(
+                    oldTask: task,
+                    newTask: task.copyWith(isCompleted: value),
+                  ),
+                );
               },
-            );
-          },
-        ),
-        Expanded(child: TaskTitle(initialTask: task, key: ObjectKey(task))),
-        IconButton(
-          onPressed: () => unawaited(taskController.removeTask(task: task)),
-          icon: Icon(Icons.delete_forever, color: Colors.red[700]),
-        ),
-      ],
+            ),
+            Expanded(
+              child: TaskTitle(initialTask: task, key: ObjectKey(task)),
+            ),
+            IconButton(
+              onPressed: () => unawaited(taskController.removeTask(task: task)),
+              icon: Icon(Icons.delete_forever, color: Colors.red[700]),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -114,21 +116,19 @@ class ThemeSwitchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeController = kServiceLocator[ThemeController]! as ThemeController;
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: ListenableBuilder(
-        listenable: themeController,
-        builder: (context, _) {
-          return IconButton(
+    return Consumer<ThemeController>(
+      builder: (context, themeController, child) {
+        return Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
             onPressed: () => unawaited(themeController.switchTheme()),
             icon: Icon(
               themeController.isDark ? Icons.dark_mode : Icons.light_mode,
               color: themeController.isDark ? Colors.black : Colors.yellow,
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -145,23 +145,26 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final taskController = kServiceLocator[TaskController]! as TaskController;
-    return AlertDialog(
-      title: const Text('Create a new task'),
-      content: TextField(
-        controller: nameController,
-        autofocus: true,
-        decoration: const InputDecoration(hintText: 'Enter task name'),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            unawaited(taskController.addTask(taskName: nameController.text));
-            Navigator.of(context).pop();
-          },
-          child: const Text('Create'),
-        ),
-      ],
+    return Consumer<TaskController>(
+      builder: (context, taskController, child) {
+        return AlertDialog(
+          title: const Text('Create a new task'),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Enter task name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                unawaited(taskController.addTask(taskName: nameController.text));
+                Navigator.of(context).pop();
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -194,15 +197,18 @@ class _TaskTitleState extends State<TaskTitle> {
 
   @override
   Widget build(BuildContext context) {
-    final taskController = kServiceLocator[TaskController]! as TaskController;
-    return TextField(
-      controller: _nameController,
-      onEditingComplete: () {
-        final newTask = _task.copyWith(name: _nameController.text);
-        unawaited(taskController.updateTask(oldTask: _task, newTask: newTask));
-        _task = newTask;
+    return Consumer<TaskController>(
+      builder: (context, taskController, child) {
+        return TextField(
+          controller: _nameController,
+          onEditingComplete: () {
+            final newTask = _task.copyWith(name: _nameController.text);
+            unawaited(taskController.updateTask(oldTask: _task, newTask: newTask));
+            _task = newTask;
+          },
+          decoration: const InputDecoration(border: UnderlineInputBorder(borderSide: BorderSide.none)),
+        );
       },
-      decoration: const InputDecoration(border: UnderlineInputBorder(borderSide: BorderSide.none)),
     );
   }
 }

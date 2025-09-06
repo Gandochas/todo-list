@@ -1,1 +1,0 @@
-final kServiceLocator = <Type, Object>{};

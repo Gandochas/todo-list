@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:my_todo_app/core/di/service_locator.dart';
 import 'package:my_todo_app/core/themes/theme.dart';
 import 'package:my_todo_app/data/tasks_datasource.dart';
 import 'package:my_todo_app/data/theme_datasource.dart';
 import 'package:my_todo_app/domain/controller/task_controller.dart';
 import 'package:my_todo_app/domain/controller/theme_controller.dart';
 import 'package:my_todo_app/presentation/pages/home.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -21,10 +21,15 @@ Future<void> main() async {
   await taskController.load();
   await themeController.load();
 
-  kServiceLocator[TaskController] = taskController;
-  kServiceLocator[ThemeController] = themeController;
-
-  runApp(const MyTODOApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => taskController),
+        ChangeNotifierProvider(create: (_) => themeController),
+      ],
+      child: const MyTODOApp(),
+    ),
+  );
 }
 
 class MyTODOApp extends StatelessWidget {
@@ -32,10 +37,8 @@ class MyTODOApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeController = kServiceLocator[ThemeController]! as ThemeController;
-    return ListenableBuilder(
-      listenable: themeController,
-      builder: (context, _) {
+    return Consumer<ThemeController>(
+      builder: (context, themeController, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'ToDO List App',
